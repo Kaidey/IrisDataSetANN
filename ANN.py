@@ -7,8 +7,8 @@ class NetworkLayer:
 
         self.weights = np.random.rand(nNeurons, nInputsPerNeuron)
         self.bias = np.random.rand(nNeurons)
-        self.activation = np.vectorize(functions['function'])
-        self.activationDerivative = np.vectorize(functions['derivative'])
+        self.activation = functions['function']
+        self.activationDerivative = functions['derivative']
 
     def activateLayer(self, x):
 
@@ -30,6 +30,14 @@ class Network:
 
         self.layers.append(layer)
 
+    def costFunction(self, expectedOutput):
+
+        dictKey = 'OutputLayer%i' % len(self.layers)
+
+        softmaxLogs = np.multiply(np.log(self.results[dictKey]), expectedOutput)
+
+        return - np.sum(softmaxLogs) / expectedOutput.shape[0]
+
     # Input data is an numberOfCases x nOfAttributes matrix
     # Weights is a nNeurons x nInputs matrix (nInputs for layer 1 is the nOfAttributes)
     # Bias is a 1 x nNeurons matrix (1 bias for each neuron)
@@ -45,15 +53,17 @@ class Network:
             # Input for layer 1 is the network's training data
             if i == 0:
                 # Originally weights is a nNeurons x nOfAttributes so to be able to do the dot product we need to transpose it -> numberOfCases x nOfAttributes . nOfAttributes x nNeurons
-                weightedSums = np.dot(inputData, layer.weights.T)
+                weightedSums = np.dot(inputData, layer.weights.T) - layer.bias
                 output = layer.activateLayer(weightedSums)
 
             else:
                 # Input for next layers is the output from the previous layer
                 inputDictKey = 'OutputLayer%d' % i
                 inputData = results[inputDictKey]
-                weightedSums = np.dot(inputData, layer.weights.T)
+                weightedSums = np.dot(inputData, layer.weights.T) - layer.bias
                 output = layer.activateLayer(weightedSums)
+
+                layer.deriveActivation(output)
 
             dictionaryKeyWS = 'WeightedSumsLayer%d' % (i + 1)
             dictionaryKeyOut = 'OutputLayer%d' % (i + 1)
@@ -61,4 +71,11 @@ class Network:
             results[dictionaryKeyWS] = weightedSums
             results[dictionaryKeyOut] = output
 
-        self.results = results
+            self.results = results
+
+    def trainANN(self, inputData, expectedOutput, numberEpochs):
+
+
+        self.forwardPropagation(inputData)
+
+        cost = self.costFunction(expectedOutput)

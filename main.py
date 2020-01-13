@@ -22,17 +22,44 @@ def selectFunctionMenu(layerID):
     elif op == 1:
 
         def sigmoid(x):
-            return 1 / float(1 + np.exp(- x))
+
+            res = 1 / float(1 + np.exp(- x))
+
+            return res
 
         def derivative(x):
-
             return sigmoid(x) / float(1 - sigmoid(x))
 
-        functions = {'function': sigmoid,
+        functions = {'function': np.vectorize(sigmoid),
                      'derivative': derivative}
     elif op == 2:
 
-        print('Not implemented yet! \n')
+        def softmax(x):
+
+            return np.exp(x) / float(sum(np.exp(x)))
+
+        def derivative(x):
+
+            nLayers = len(network.layers)
+            outputLayer = network.layers[nLayers - 1]
+
+            # Matrix with the same size as the weights matrix for the output layer
+            adjustments = np.zeros((outputLayer.weights.shape[0], outputLayer.weights.shape[1]))
+
+            dictKey = 'OutputLayer%i' % (nLayers - 1)
+            outputPreviousLayer = network.results[dictKey]
+
+            # for each output
+            for i in range(len(x)):
+                # for each input (connection) connected to ith output
+                for j in range(outputPreviousLayer.shape[0]):
+                    if i == j:
+                        adjustments[i][j] = x[i] * (1 - outputPreviousLayer[j])
+                    else:
+                        adjustments[i][j] = - x[i] * outputPreviousLayer[j]
+
+        functions = {'function': softmax,
+                     'derivative': derivative}
 
     else:
         print('Invalid Option! \n')
@@ -48,21 +75,29 @@ def displayCreateMenu():
 
     for i in range(nLayers):
 
-        nNeurons = input('Amount of neurons in layer %d: \n' % (i + 1))
-        functions = selectFunctionMenu(i)
-
-        # If it is the first layer, define no of inputs
-        if i == 0:
-            nInputsPerNeuron = input('Amount of input neurons: \n')
-            layer = neuralNetwork.NetworkLayer(nNeurons, nInputsPerNeuron, functions)
-            network.addLayer(layer)
-
-        # Else, the program calculates no of inputs by itself
-        else:
+        if i == (nLayers - 1):
+            nNeurons = 3
+            functions = selectFunctionMenu(i)
             previousLayer = network.layers[i - 1]
             nInputsPerNeuron = previousLayer.weights.shape[0]
             layer = neuralNetwork.NetworkLayer(nNeurons, nInputsPerNeuron, functions)
             network.addLayer(layer)
+
+        else:
+            nNeurons = input('Amount of neurons in layer %d: \n' % (i + 1))
+            functions = selectFunctionMenu(i)
+            # If it is the first layer, define no of inputs
+            if i == 0:
+                nInputsPerNeuron = input('Amount of input neurons: \n')
+                layer = neuralNetwork.NetworkLayer(nNeurons, nInputsPerNeuron, functions)
+                network.addLayer(layer)
+
+            # Else, the program calculates no of inputs by itself
+            else:
+                previousLayer = network.layers[i - 1]
+                nInputsPerNeuron = previousLayer.weights.shape[0]
+                layer = neuralNetwork.NetworkLayer(nNeurons, nInputsPerNeuron, functions)
+                network.addLayer(layer)
 
 def prepareInput():
 
@@ -71,8 +106,18 @@ def prepareInput():
     iris.loc[iris['species'] == 'setosa', 'species'] = 0
 
     trainingData = iris[['sepalLength', 'sepalWidth', 'petalLength', 'petalWidth']].values
-    expectedOutput = iris[['species']].values
-    expectedOutput = expectedOutput.astype('uint8')
+    labels = iris[['species']].values
+
+    # Since we have 3 output neurons (3 classes)
+    expectedOutput = np.zeros((len(trainingData), 3))
+
+    # Create matrix of expected output
+    # First column is 1 if expected output is setosa mapped to 0 above
+    # Second column is 1 if expected output is versicolor mapped to 1 above
+    # Third column is 1 if expected output is virginica mapped to 2 above
+    # All others are 0
+    for i in range(len(labels)):
+        expectedOutput[i][labels[i]] = 1
 
     return trainingData, expectedOutput
 
@@ -104,9 +149,9 @@ def displayMainMenu():
 
             else:
                 trainingData, expectedOutput = prepareInput()
-                arr = np.array([1, 2, 3, 4])
-                print(arr)
-                network.forwardPropagation(arr)
+                arr = np.array([5.1, 3.5, 1.4, 0.2])
+                exp = np.array([1, 0, 0])
+                network.trainANN(arr, exp, 2500)
 
 
                 print(network.results)
