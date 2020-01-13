@@ -1,8 +1,10 @@
 import ANN as neuralNetwork
 import numpy as np
+import pandas as pd
 
 np.random.seed(2)
 network = neuralNetwork.Network()
+iris = pd.read_csv('Iris.csv')
 
 
 def selectFunctionMenu(layerID):
@@ -62,21 +64,55 @@ def displayCreateMenu():
             layer = neuralNetwork.NetworkLayer(nNeurons, nInputsPerNeuron, functions)
             network.addLayer(layer)
 
+def prepareInput():
+
+    iris.loc[iris['species'] == 'virginica', 'species'] = 2
+    iris.loc[iris['species'] == 'versicolor', 'species'] = 1
+    iris.loc[iris['species'] == 'setosa', 'species'] = 0
+
+    trainingData = iris[['sepalLength', 'sepalWidth', 'petalLength', 'petalWidth']].values
+    expectedOutput = iris[['species']].values
+    expectedOutput = expectedOutput.astype('uint8')
+
+    return trainingData, expectedOutput
+
 def displayMainMenu():
-    print('0 - Exit \n'
-          '1 - Create ANN \n'
-          '2 - Train ANN \n'
-          '3 - Make Predictions \n'
-          '4 - Save Predictions to File \n'
-          '5 - Statistics \n')
 
-    op = input('Choice: \n')
+    op = -1
 
-    if op == 0:
-        exit(0)
+    while op != 0:
 
-    elif op == 1:
-        displayCreateMenu()
+        print('0 - Exit \n'
+              '1 - Create ANN \n'
+              '2 - Train ANN \n'
+              '3 - Make Predictions \n'
+              '4 - Save Predictions to File \n'
+              '5 - Statistics \n')
+
+        op = input('Choice: \n')
+
+        if op == 0:
+            exit(0)
+
+        elif op == 1:
+            displayCreateMenu()
+
+        elif op == 2:
+
+            if len(network.layers) == 0:
+                print('Create an ANN first!')
+
+            else:
+                trainingData, expectedOutput = prepareInput()
+                arr = np.array([1, 2, 3, 4])
+                print(arr)
+                network.forwardPropagation(arr)
+
+
+                print(network.results)
+
+
+
 
 
 displayMainMenu()
